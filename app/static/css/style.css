@@ -1,0 +1,295 @@
+/* =====================================================
+   Summer of Simplex — K0IRO
+   Preserves Parkmas color scheme & layout conventions
+   ===================================================== */
+
+/* Reset & base */
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
+html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    font-family: Arial, sans-serif;
+    background-color: #ffffff;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ── Title bar ────────────────────────────────────── */
+.title-bar {
+    background-color: #30638e;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 2rem;
+    flex-shrink: 0;
+}
+
+.title-left a {
+    color: #ffffff;
+    text-decoration: none;
+    font-size: 1.1rem;
+    font-weight: bold;
+}
+
+.title-left a:hover {
+    text-decoration: underline;
+}
+
+.title-right a {
+    color: #ffffff;
+    margin-left: 1.5rem;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+.title-right a:hover {
+    text-decoration: underline;
+}
+
+/* ── Main content ─────────────────────────────────── */
+.main-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 2rem;
+}
+
+/* ── Tables ───────────────────────────────────────── */
+.table-container {
+    width: 100%;
+    max-width: 960px;
+    margin: 0 auto;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95rem;
+}
+
+th {
+    background-color: #30638e;
+    color: #ffffff;
+    font-weight: bold;
+    padding: 9px 12px;
+    border: 1px solid #245577;
+    text-align: left;
+}
+
+td {
+    padding: 8px 12px;
+    border: 1px solid #ccc;
+    text-align: left;
+}
+
+tr:nth-child(even) td {
+    background-color: #f4f8fc;
+}
+
+tr:nth-child(odd) td {
+    background-color: #ffffff;
+}
+
+tr:hover td {
+    background-color: #e8f0f8;
+}
+
+/* ── Buttons ──────────────────────────────────────── */
+.btn {
+    display: inline-block;
+    padding: 8px 16px;
+    font-size: 0.95rem;
+    font-weight: bold;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background-color 0.15s ease;
+}
+
+.btn-primary {
+    background-color: #30638e;
+    color: #ffffff;
+}
+
+.btn-primary:hover {
+    background-color: #245577;
+    color: #ffffff;
+}
+
+.btn-danger {
+    background-color: #dc3545;
+    color: #ffffff;
+}
+
+.btn-danger:hover {
+    background-color: #a71d2a;
+}
+
+.btn-success {
+    background-color: #28a745;
+    color: #ffffff;
+}
+
+.btn-success:hover {
+    background-color: #1e7e34;
+}
+
+.btn-secondary {
+    background-color: #6c757d;
+    color: #ffffff;
+}
+
+.btn-secondary:hover {
+    background-color: #545b62;
+}
+
+.btn-sm {
+    padding: 4px 10px;
+    font-size: 0.85rem;
+}
+
+/* ── Forms ────────────────────────────────────────── */
+.form-group {
+    margin-bottom: 1.1rem;
+}
+
+.form-group label {
+    display: block;
+    font-weight: bold;
+    margin-bottom: 4px;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    padding: 9px 10px;
+    font-size: 1rem;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    transition: border-color 0.15s ease;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    border-color: #30638e;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(48, 99, 142, 0.2);
+}
+
+/* ── Alerts ───────────────────────────────────────── */
+.alert {
+    padding: 14px 18px;
+    border-radius: 4px;
+    margin-bottom: 1.25rem;
+    font-weight: bold;
+}
+
+.alert-success {
+    background-color: #d4edda;
+    border: 2px solid #28a745;
+    color: #155724;
+}
+
+.alert-danger {
+    background-color: #f8d7da;
+    border: 2px solid #dc3545;
+    color: #721c24;
+}
+
+.alert-warning {
+    background-color: #fff3cd;
+    border: 2px solid #ffc107;
+    color: #856404;
+}
+
+.alert-info {
+    background-color: #d1ecf1;
+    border: 2px solid #17a2b8;
+    color: #0c5460;
+}
+
+/* ── Danger zone ──────────────────────────────────── */
+.danger-zone {
+    padding: 20px;
+    background: #f8d7da;
+    border: 2px solid #dc3545;
+    border-radius: 6px;
+    margin-bottom: 20px;
+}
+
+.danger-zone h3 {
+    color: #721c24;
+    margin-top: 0;
+}
+
+.danger-zone p,
+.danger-zone li,
+.danger-zone ul {
+    color: #721c24;
+}
+
+/* ── Utility ──────────────────────────────────────── */
+.update-info {
+    margin: 1rem 0;
+    font-size: 0.9rem;
+    color: #555;
+}
+
+.badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 0.8rem;
+    font-weight: bold;
+}
+
+.badge-success {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.badge-danger {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+.badge-info {
+    background-color: #d1ecf1;
+    color: #0c5460;
+}
+
+/* ── Rank column ──────────────────────────────────── */
+.rank-1 { color: #c9a227; font-weight: bold; font-size: 1.1rem; }
+.rank-2 { color: #9e9e9e; font-weight: bold; }
+.rank-3 { color: #a0522d; font-weight: bold; }
+
+/* ── Inline action forms ──────────────────────────── */
+.inline-form {
+    display: inline;
+}
+
+/* ── Mobile ───────────────────────────────────────── */
+@media (max-width: 650px) {
+    .title-bar {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+
+    .title-right a {
+        margin-left: 0.75rem;
+    }
+
+    .main-content {
+        padding: 1rem;
+    }
+}

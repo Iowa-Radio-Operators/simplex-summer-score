@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2>⚠️ Master Reset</h2>
+
+<div style="max-width: 700px; width: 100%;">
+
+    {% if success %}
+        <div class="alert alert-success">{{ success }}</div>
+        <p><a href="{{ url_for('main.admin_home') }}">Return to Admin Dashboard</a></p>
+
+    {% else %}
+
+        <div class="danger-zone">
+            <h3>⚠️ DANGER ZONE ⚠️</h3>
+            <p>This will <strong>permanently delete</strong>:</p>
+            <ul>
+                <li>All contact submissions</li>
+                <li>All score multipliers</li>
+            </ul>
+            <p><strong>This action CANNOT be undone!</strong></p>
+        </div>
+
+        {% if error %}
+            <div class="alert alert-warning">{{ error }}</div>
+        {% endif %}
+
+        <form method="POST">
+            <div class="form-group">
+                <label>To confirm, type: <code>DELETE EVERYTHING</code></label>
+                <input type="text"
+                       name="confirmation"
+                       placeholder="Type here to confirm"
+                       required>
+            </div>
+
+            <button type="submit" class="btn btn-danger">
+                🗑️ DELETE EVERYTHING
+            </button>
+        </form>
+
+        <p style="margin-top: 2rem;">
+            <a href="{{ url_for('main.admin_home') }}">← Cancel and return to Admin Dashboard</a>
+        </p>
+
+    {% endif %}
+
+</div>
+
+{% endblock %}

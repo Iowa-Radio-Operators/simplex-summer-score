@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h1>Scoring Overview</h1>
+
+<div class="table-container">
+
+    <p style="margin-bottom: 1rem;">
+        <a href="{{ url_for('main.admin_home') }}" class="btn btn-secondary btn-sm">← Admin Home</a>
+    </p>
+
+    <!-- ── Summary leaderboard ── -->
+    <table>
+        <thead>
+            <tr>
+                <th>Rank</th>
+                <th>Operator</th>
+                <th>Total Score</th>
+                <th>Voice Contacts</th>
+                <th>Voice Score</th>
+                <th>POTA Contacts</th>
+                <th>Digital Contacts</th>
+                <th>Digital Score</th>
+                <th>Days Active</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for op in operators %}
+            <tr>
+                <td>{{ loop.index }}</td>
+                <td><strong>{{ op.operator }}</strong></td>
+                <td><strong>{{ op.total_score | round(2) }}</strong></td>
+                <td>{{ op.voice_contacts }}</td>
+                <td>{{ op.voice_score | round(2) }}</td>
+                <td>{{ op.pota_contacts }}</td>
+                <td>{{ op.digital_contacts }}</td>
+                <td>{{ op.digital_score | round(2) }}</td>
+                <td>{{ op.days }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <hr style="margin: 2rem 0;">
+
+    <!-- ── Per-operator daily breakdown ── -->
+    <h2>Daily Breakdown</h2>
+
+    {% for op in operators %}
+    <h3 style="margin-top: 1.5rem; border-bottom: 2px solid #30638e; padding-bottom: 4px;">
+        {{ op.operator }}
+        <span style="font-size: 0.85rem; font-weight: normal; color: #555; margin-left: 10px;">
+            Total: {{ op.total_score | round(2) }} pts
+        </span>
+    </h3>
+
+    {% if op.daily %}
+        {% for date, day in op.daily.items() %}
+        <div style="margin-bottom: 1.5rem; margin-left: 1rem;">
+
+            <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 6px;">
+                <strong>{{ date }}</strong>
+                <span style="color: #555;">{{ day.score | round(2) }} pts</span>
+
+                {% if day.multiplier and day.multiplier != 1.0 %}
+                    <span class="badge badge-danger">×{{ day.multiplier }} BONUS</span>
+                    {% if day.multiplier_reason %}
+                        <em style="font-size: 0.88rem; color: #666;">{{ day.multiplier_reason }}</em>
+                    {% endif %}
+                {% endif %}
+
+                <a href="{{ url_for('main.set_multiplier', operator=op.operator, date_str=date.strftime('%Y-%m-%d')) }}"
+                   style="font-size: 0.85rem; margin-left: auto;">
+                    [{% if day.multiplier and day.multiplier != 1.0 %}Edit{% else %}Add{% endif %} Bonus]
+                </a>
+            </div>
+
+            <div style="display: flex; gap: 1.5rem; flex-wrap: wrap;">
+
+                <!-- Voice column -->
+                <div style="flex: 1; min-width: 260px;">
+                    <div style="background: #e8f0f8; border-top: 3px solid #30638e; padding: 8px 12px; font-weight: bold; font-size: 0.9rem;">
+                        🎙 Voice Simplex
+                        <span style="font-weight: normal; float: right;">{{ day.voice | length }} contact(s)</span>
+                    </div>
+                    {% if day.voice %}
+                    <table style="margin: 0; font-size: 0.88rem;">
+                        <thead>
+                            <tr>
+                                <th>Their Call</th>
+                                <th>Freq</th>
+                                <th>POTA</th>
+                                <th>Pts</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for entry in day.voice %}
+                            <tr>
+                                <td>{{ entry.sub.contact_call }}</td>
+                                <td>{{ entry.sub.frequency or "—" }}</td>
+                                <td>
+                                    {% if entry.sub.is_pota %}
+                                        <span class="badge badge-info">{{ entry.sub.pota_park or "POTA" }}</span>
+                                    {% else %}
+                                        —
+                                    {% endif %}
+                                </td>
+                                <td><strong>{{ entry.score | round(2) }}</strong></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <p style="padding: 8px 12px; color: #888; font-size: 0.88rem; margin: 0;">No voice contacts.</p>
+                    {% endif %}
+                </div>
+
+                <!-- Digital column -->
+                <div style="flex: 1; min-width: 260px;">
+                    <div style="background: #f0f4e8; border-top: 3px solid #5a8a3c; padding: 8px 12px; font-weight: bold; font-size: 0.9rem;">
+                        💻 Digital
+                        <span style="font-weight: normal; float: right;">{{ day.digital | length }} contact(s)</span>
+                    </div>
+                    {% if day.digital %}
+                    <table style="margin: 0; font-size: 0.88rem;">
+                        <thead>
+                            <tr>
+                                <th>Their Call</th>
+                                <th>Freq</th>
+                                <th>Mode</th>
+                                <th>Pts</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for entry in day.digital %}
+                            <tr>
+                                <td>{{ entry.sub.contact_call }}</td>
+                                <td>{{ entry.sub.frequency or "—" }}</td>
+                                <td>{{ entry.sub.digital_mode or "—" }}</td>
+                                <td><strong>{{ entry.score | round(2) }}</strong></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <p style="padding: 8px 12px; color: #888; font-size: 0.88rem; margin: 0;">No digital contacts.</p>
+                    {% endif %}
+                </div>
+
+            </div><!-- end flex row -->
+        </div><!-- end day -->
+        {% endfor %}
+
+    {% else %}
+        <p style="color: #888; font-style: italic; margin-left: 1rem;">No scored contacts yet.</p>
+    {% endif %}
+
+    {% endfor %}
+
+</div>
+{% endblock %}

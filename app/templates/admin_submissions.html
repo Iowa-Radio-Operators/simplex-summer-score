@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2>All Submissions</h2>
+
+<div class="table-container">
+
+    <p style="margin-bottom: 1rem;">
+        <a href="{{ url_for('main.admin_home') }}" class="btn btn-secondary btn-sm">← Admin Home</a>
+    </p>
+
+    {% if submissions %}
+    <table>
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>From</th>
+                <th>To</th>
+                <th>Mode</th>
+                <th>Detail</th>
+                <th>Freq (MHz)</th>
+                <th>Submitted</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for sub in submissions %}
+            <tr>
+                <td>{{ sub.id }}</td>
+                <td><strong>{{ sub.submitted_by }}</strong></td>
+                <td>{{ sub.contact_call }}</td>
+                <td>
+                    {% if sub.mode_type == 'voice' %}
+                        Voice
+                        {% if sub.is_pota %}
+                            <span class="badge badge-info">POTA</span>
+                        {% endif %}
+                    {% elif sub.mode_type == 'digital' %}
+                        Digital
+                    {% else %}
+                        —
+                    {% endif %}
+                </td>
+                <td>
+                    {% if sub.mode_type == 'voice' and sub.is_pota and sub.pota_park %}
+                        {{ sub.pota_park }}
+                    {% elif sub.mode_type == 'digital' and sub.digital_mode %}
+                        {{ sub.digital_mode }}
+                    {% else %}
+                        —
+                    {% endif %}
+                </td>
+                <td>{{ sub.frequency or "—" }}</td>
+                <td>{{ sub.submitted_at.strftime("%Y-%m-%d %H:%M") if sub.submitted_at else "—" }}</td>
+                <td>
+                    <form method="POST"
+                          action="{{ url_for('main.delete_submission', sub_id=sub.id) }}"
+                          class="inline-form"
+                          onsubmit="return confirm('Delete this submission? You can restore it later.');">
+                        <input type="hidden" name="reason" value="">
+                        <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+        <p>No submissions yet.</p>
+    {% endif %}
+
+</div>
+
+{% endblock %}

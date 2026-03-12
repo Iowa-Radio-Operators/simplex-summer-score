@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2>Deleted Submissions</h2>
+
+<div class="table-container">
+
+    <p style="margin-bottom: 1rem;">
+        <a href="{{ url_for('main.admin_home') }}" class="btn btn-secondary btn-sm">← Admin Home</a>
+    </p>
+
+    {% if submissions %}
+    <table>
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Submitted By</th>
+                <th>Contact Call</th>
+                <th>Date</th>
+                <th>Deleted At</th>
+                <th>Deleted By</th>
+                <th>Reason</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for sub in submissions %}
+            <tr>
+                <td>{{ sub.id }}</td>
+                <td>{{ sub.submitted_by }}</td>
+                <td>{{ sub.contact_call or "—" }}</td>
+                <td>{{ sub.contact_date or "—" }}</td>
+                <td>{{ sub.deleted_at.strftime("%Y-%m-%d %H:%M") if sub.deleted_at else "—" }}</td>
+                <td>{{ sub.deleted_by or "—" }}</td>
+                <td>{{ sub.delete_reason or "—" }}</td>
+                <td>
+                    <form method="POST"
+                          action="{{ url_for('main.restore_submission', sub_id=sub.id) }}"
+                          class="inline-form">
+                        <button type="submit" class="btn btn-success btn-sm">Restore</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+        <p>No deleted submissions.</p>
+    {% endif %}
+
+</div>
+
+{% endblock %}

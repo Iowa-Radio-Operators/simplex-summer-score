@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2>Set Daily Bonus Multiplier</h2>
+
+<div style="max-width: 550px; width: 100%;">
+
+    <p><strong>Operator:</strong> {{ operator }}</p>
+    <p><strong>Date:</strong> {{ date }}</p>
+
+    <form method="POST" style="margin-top: 20px;">
+
+        <div class="form-group">
+            <label for="multiplier">Multiplier:</label>
+            <input type="number"
+                   id="multiplier"
+                   name="multiplier"
+                   step="0.1"
+                   min="0.1"
+                   value="{{ current_multiplier }}"
+                   required
+                   style="max-width: 180px;">
+        </div>
+
+        <div class="form-group">
+            <label for="reason">Reason (optional):</label>
+            <input type="text"
+                   id="reason"
+                   name="reason"
+                   value="{{ current_reason }}"
+                   placeholder="e.g., Longest contact, DX achievement…">
+        </div>
+
+        <button type="submit" class="btn btn-primary">Save Multiplier</button>
+
+        {% if current_multiplier != 1.0 %}
+        <button type="submit"
+                name="delete"
+                value="true"
+                onclick="return confirm('Delete this multiplier?');"
+                class="btn btn-danger"
+                style="margin-left: 10px;">
+            Delete Multiplier
+        </button>
+        {% endif %}
+
+    </form>
+
+    <p style="margin-top: 1.5rem;">
+        <a href="{{ url_for('main.scoring_overview') }}">← Back to Scoring</a>
+    </p>
+
+</div>
+
+{% endblock %}

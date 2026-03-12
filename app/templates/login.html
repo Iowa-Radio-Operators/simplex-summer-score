@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2>Admin Login</h2>
+
+<div style="max-width: 360px; width: 100%;">
+
+    {% if error %}
+        <div class="alert alert-danger">{{ error }}</div>
+    {% endif %}
+
+    <form method="POST">
+
+        <div class="form-group">
+            <label for="callsign">Callsign</label>
+            <input type="text"
+                   id="callsign"
+                   name="callsign"
+                   placeholder="W0ABC"
+                   autocomplete="username"
+                   style="text-transform: uppercase;"
+                   required
+                   autofocus>
+        </div>
+
+        <div class="form-group">
+            <label for="password">Password</label>
+            <input type="password"
+                   id="password"
+                   name="password"
+                   autocomplete="current-password"
+                   required>
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 0.5rem;">
+            Log In
+        </button>
+
+    </form>
+
+</div>
+
+<script>
+document.getElementById('callsign').addEventListener('input', function() {
+    const pos = this.selectionStart;
+    this.value = this.value.toUpperCase();
+    this.setSelectionRange(pos, pos);
+});
+</script>
+
+{% endblock %}

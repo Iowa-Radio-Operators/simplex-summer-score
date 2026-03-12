@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2>Admin Dashboard</h2>
+
+<div style="max-width: 600px; width: 100%;">
+
+    <h3>System Overview</h3>
+    <p><strong>Active Submissions:</strong> {{ total_subs }}</p>
+    <p><strong>Deleted Submissions:</strong> {{ deleted_subs }}</p>
+
+    <h3>Management</h3>
+    <p><a href="{{ url_for('main.admin_submissions') }}">View All Submissions</a></p>
+    <p><a href="{{ url_for('main.admin_deleted') }}">View Deleted Submissions</a></p>
+    <p><a href="{{ url_for('main.scoring_overview') }}">Scoring Overview</a></p>
+
+    <hr style="margin: 30px 0; border: 1px solid #ccc;">
+
+    <h3 style="color: #dc3545;">Danger Zone</h3>
+    <p>
+        <a href="{{ url_for('main.master_reset') }}"
+           style="color: #dc3545; font-weight: bold;">
+            ⚠️ Master Reset (Delete Everything)
+        </a>
+    </p>
+    <p style="color: #666; font-size: 0.9em;">
+        Use at the end of the contest to prepare for the next round.
+    </p>
+
+</div>
+
+{% endblock %}

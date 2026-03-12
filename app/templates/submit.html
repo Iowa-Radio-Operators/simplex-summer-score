@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2>Submit a Contact</h2>
+
+<div style="max-width: 580px; width: 100%;">
+
+    {% if errors %}
+        <div class="alert alert-danger">
+            <strong>Please fix the following:</strong>
+            <ul style="margin: 8px 0 0 0; padding-left: 1.2rem;">
+                {% for e in errors %}<li>{{ e }}</li>{% endfor %}
+            </ul>
+        </div>
+    {% endif %}
+
+    {% if success %}
+        <div class="alert alert-success">{{ success }}</div>
+    {% endif %}
+
+    <form method="POST" id="contactForm">
+
+        <!-- ── Row 1: Callsigns ── -->
+        <div style="display: flex; gap: 1rem;">
+            <div class="form-group" style="flex: 1;">
+                <label for="submitted_by">Your Callsign</label>
+                <input type="text"
+                       id="submitted_by"
+                       name="submitted_by"
+                       value="{{ form.get('submitted_by', '') }}"
+                       placeholder="W0ABC"
+                       autocomplete="off"
+                       style="text-transform: uppercase;"
+                       required>
+            </div>
+            <div class="form-group" style="flex: 1;">
+                <label for="contact_call">Their Callsign</label>
+                <input type="text"
+                       id="contact_call"
+                       name="contact_call"
+                       value="{{ form.get('contact_call', '') }}"
+                       placeholder="K0XYZ"
+                       autocomplete="off"
+                       style="text-transform: uppercase;"
+                       required>
+            </div>
+        </div>
+
+        <!-- ── Row 2: Mode radio buttons ── -->
+        <div class="form-group">
+            <label>Mode</label>
+            <div style="display: flex; gap: 2rem; margin-top: 6px;">
+                <label style="font-weight: normal; display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                    <input type="radio" name="mode_type" value="voice" id="mode_voice"
+                           {% if form.get('mode_type') == 'voice' %}checked{% endif %}>
+                    Voice Simplex
+                </label>
+                <label style="font-weight: normal; display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                    <input type="radio" name="mode_type" value="digital" id="mode_digital"
+                           {% if form.get('mode_type') == 'digital' %}checked{% endif %}>
+                    Digital
+                </label>
+            </div>
+        </div>
+
+        <!-- ── Voice sub-section: POTA? ── -->
+        <div id="voice_section" style="display: none; margin-left: 1rem; padding: 12px; background: #f4f8fc; border-left: 3px solid #30638e; border-radius: 0 4px 4px 0;">
+            <div class="form-group" style="margin-bottom: 0.75rem;">
+                <label>Was this a POTA contact?</label>
+                <div style="display: flex; gap: 2rem; margin-top: 6px;">
+                    <label style="font-weight: normal; display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                        <input type="radio" name="is_pota" value="yes" id="pota_yes"
+                               {% if form.get('is_pota') == 'yes' %}checked{% endif %}>
+                        Yes
+                    </label>
+                    <label style="font-weight: normal; display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                        <input type="radio" name="is_pota" value="no" id="pota_no"
+                               {% if form.get('is_pota', 'no') == 'no' %}checked{% endif %}>
+                        No
+                    </label>
+                </div>
+            </div>
+
+            <!-- POTA park field — shown only if POTA = yes -->
+            <div id="pota_park_section" style="display: none;">
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label for="pota_park">POTA Park Reference</label>
+                    <input type="text"
+                           id="pota_park"
+                           name="pota_park"
+                           value="{{ form.get('pota_park', '') }}"
+                           placeholder="K-1234"
+                           style="max-width: 200px; text-transform: uppercase;">
+                    <small style="color: #666; display: block; margin-top: 4px;">
+                        Enter the park the activator was operating from.
+                    </small>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── Digital sub-section ── -->
+        <div id="digital_section" style="display: none; margin-left: 1rem; padding: 12px; background: #f4f8fc; border-left: 3px solid #30638e; border-radius: 0 4px 4px 0;">
+            <div class="form-group" style="margin-bottom: 0;">
+                <label>Digital Mode</label>
+                <div style="display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 6px;">
+                    {% set dmodes = ['SSTV', 'PSK', 'RTTY', 'FT4/8', 'JS8', 'Winlink'] %}
+                    {% for dm in dmodes %}
+                    <label style="font-weight: normal; display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                        <input type="radio" name="digital_mode" value="{{ dm }}"
+                               {% if form.get('digital_mode') == dm %}checked{% endif %}>
+                        {{ dm }}
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- ── Frequency ── -->
+        <div class="form-group" style="margin-top: 1rem;">
+            <label for="frequency">Frequency (MHz)</label>
+            <input type="text"
+                   id="frequency"
+                   name="frequency"
+                   value="{{ form.get('frequency', '') }}"
+                   placeholder="146.520"
+                   style="max-width: 200px;">
+        </div>
+
+        <!-- ── Notes ── -->
+        <div class="form-group">
+            <label for="notes">Notes <span style="font-weight: normal; color: #666;">(optional)</span></label>
+            <textarea id="notes"
+                      name="notes"
+                      rows="3"
+                      placeholder="Any additional details about the contact…">{{ form.get('notes', '') }}</textarea>
+        </div>
+
+        <!-- ── Submit ── -->
+        <button type="submit" class="btn btn-primary" style="margin-top: 0.5rem;">
+            Submit Contact
+        </button>
+
+    </form>
+</div>
+
+<script>
+// ── Uppercase callsign inputs in real time ──────────────
+document.getElementById('submitted_by').addEventListener('input', function() {
+    const pos = this.selectionStart;
+    this.value = this.value.toUpperCase();
+    this.setSelectionRange(pos, pos);
+});
+document.getElementById('contact_call').addEventListener('input', function() {
+    const pos = this.selectionStart;
+    this.value = this.value.toUpperCase();
+    this.setSelectionRange(pos, pos);
+});
+document.getElementById('pota_park').addEventListener('input', function() {
+    const pos = this.selectionStart;
+    this.value = this.value.toUpperCase();
+    this.setSelectionRange(pos, pos);
+});
+
+// ── Show/hide mode sub-sections ────────────────────────
+function updateModeSections() {
+    const voice   = document.getElementById('mode_voice').checked;
+    const digital = document.getElementById('mode_digital').checked;
+    document.getElementById('voice_section').style.display   = voice   ? 'block' : 'none';
+    document.getElementById('digital_section').style.display = digital ? 'block' : 'none';
+}
+
+// ── Show/hide POTA park field ──────────────────────────
+function updatePotaSection() {
+    const yes = document.getElementById('pota_yes').checked;
+    document.getElementById('pota_park_section').style.display = yes ? 'block' : 'none';
+}
+
+document.querySelectorAll('input[name="mode_type"]').forEach(r =>
+    r.addEventListener('change', updateModeSections)
+);
+document.querySelectorAll('input[name="is_pota"]').forEach(r =>
+    r.addEventListener('change', updatePotaSection)
+);
+
+// ── Restore state on validation error (form re-render) ─
+updateModeSections();
+updatePotaSection();
+</script>
+
+{% endblock %}

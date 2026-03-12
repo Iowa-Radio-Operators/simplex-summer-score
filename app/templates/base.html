@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title if title else "K0IRO Summer of Simplex" }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+
+<div class="title-bar">
+    <div class="title-left">
+        <a href="https://www.k0iro.com">Iowa Radio Operators | K0IRO</a>
+    </div>
+
+    <div class="title-right">
+        <a href="{{ url_for('main.index') }}">Home</a>
+        <a href="{{ url_for('main.submit') }}">Submit</a>
+        <a href="{{ url_for('main.leaderboard') }}">Leaders</a>
+
+        {% if session.get('user') %}
+            {% if session.get('user_is_admin') %}
+                <a href="{{ url_for('main.admin_home') }}">Admin</a>
+            {% endif %}
+            <a href="{{ url_for('main.logout') }}">Logout ({{ session.get('user') }})</a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="main-content">
+    {% block content %}{% endblock %}
+</div>
+
+</body>
+</html>
