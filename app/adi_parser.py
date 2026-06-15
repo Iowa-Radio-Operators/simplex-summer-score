@@ -9,8 +9,8 @@ from datetime import datetime
 REQUIRED_FIELDS = {"call", "qso_date", "time_on"}
 
 # Maximum allowed lines in an uploaded ADI file
-# QRZLogbook format uses one line per element (not one per QSO), so 1200 accommodates larger exports.
-MAX_ADI_LINES = 1200
+# QRZLogbook format uses ~50 lines per QSO; 2600 accommodates a full page export (50 QSOs).
+MAX_ADI_LINES = 2600
 
 # Regex for callsigns: alphanumeric, hyphens, slashes; 1-20 chars
 CALLSIGN_RE = re.compile(r'^[A-Z0-9/\-]{1,20}$')
