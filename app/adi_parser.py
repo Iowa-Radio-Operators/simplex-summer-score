@@ -28,7 +28,7 @@ ADI_TAG_RE = re.compile(r"<([a-zA-Z_]+):(\d+)>([^<]*)", re.DOTALL)
 VALID_DIGITAL_MODES = {"SSTV", "PSK", "RTTY", "FT4/8", "JS8", "WINLINK"}
 
 # Modes excluded from contest scoring (e.g., CW not accepted for simplex summer)
-EXCLUDED_MODES = {"CW"}
+EXCLUDED_MODES = set()  # No modes are currently excluded
 
 # Common ham band frequencies in MHz (for sanity checking)
 COMMON_BANDS = [
@@ -324,12 +324,6 @@ def parse_adi_file(content: str) -> ADIFParseResult:
         errors = _validate_record(record, line_num)
         if errors:
             result.errors.extend(errors)
-            continue
-
-        # Exclude excluded modes (e.g., CW not accepted for simplex summer)
-        if record.adif_mode and record.adif_mode in EXCLUDED_MODES:
-            result.excluded_modes.append({"mode": record.adif_mode, "call": record.contact_call})
-            result.warnings.append(f"{record.adif_mode} mode is not accepted in this contest.")
             continue
 
         # Filter out-of-band frequencies silently
