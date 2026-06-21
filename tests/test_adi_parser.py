@@ -653,15 +653,16 @@ def test_digital_mode_override_by_digital_mode_field():
 
 
 def test_cw_becomes_digital():
-    """CW mode should be excluded from contest scoring."""
+    """CW mode should be treated as a normal digital mode."""
     from app.adi_parser import parse_adi_file
     text = _adi_text([{"MY_CALL": "WB9XYZ", "CALL": "KB9ABC", "QSO_DATE": "20240615", "TIME_ON": "200000", "MODE": "CW"}])
     result = parse_adi_file(text)
 
-    assert result.success is False  # CW excluded, no valid records remain
-    assert len(result.excluded_modes) == 1
-    assert result.excluded_modes[0]["mode"] == "CW"
-    assert any("not accepted" in w for w in result.warnings)
+    assert result.success is True
+    r = result.records[0]
+    assert r.mode_type == "digital"
+    assert r.digital_mode == "CW"
+    assert len(result.excluded_modes) == 0
 
 
 def test_js8_becomes_digital():
@@ -1090,7 +1091,7 @@ def test_adif_master_format_parses_all_records():
 
 
 def test_adif_master_format_with_cw_excluded():
-    """ADIF Master file with CW contacts: CW excluded, valid records still parsed."""
+    """ADIF Master file with CW contacts: CW is treated as valid digital mode."""
     from app.adi_parser import parse_adi_file
     
     header = "<ADIF_VER:5>3.1<EOR><EOH>\n\n"
@@ -1105,17 +1106,17 @@ def test_adif_master_format_with_cw_excluded():
     result = parse_adi_file(content)
 
     assert result.success is True
-    assert len(result.records) == 2  # CW excluded, 2 FT8 remain
+    assert len(result.records) == 3  # CW is now valid digital mode
     assert result.records[0].contact_call == "KD7ABC"
-    assert result.records[1].contact_call == "KD6ABC"
-    assert len(result.excluded_modes) == 1
-    assert result.excluded_modes[0]["mode"] == "CW"
-    # Check warning mentions CW exclusion
-    assert any("CW" in w and "not accepted" in w for w in result.warnings)
+    assert result.records[1].contact_call == "MB9GHI"
+    assert result.records[1].mode_type == "digital"
+    assert result.records[1].digital_mode == "CW"
+    assert result.records[2].contact_call == "KD6ABC"
+    assert len(result.excluded_modes) == 0
 
 
-def test_adif_master_format_all_cw_excluded():
-    """ADIF Master file with only CW contacts should fail with no valid records."""
+def test_adif_master_format_all_cw():
+    """ADIF Master file with only CW contacts should succeed as valid digital mode."""
     from app.adi_parser import parse_adi_file
     
     header = "<ADIF_VER:5>3.1<EOR><EOH>\n\n"
@@ -1128,9 +1129,10 @@ def test_adif_master_format_all_cw_excluded():
     content = header + "\n".join(records) + "\n"
     result = parse_adi_file(content)
 
-    assert result.success is False
-    assert len(result.records) == 0
-    assert len(result.excluded_modes) == 2
+    assert result.success is True
+    assert len(result.records) == 2
+    assert all(r.mode_type == "digital" and r.digital_mode == "CW" for r in result.records)
+    assert len(result.excluded_modes) == 0
 
 
 def test_adif_master_format_preserves_pot_a_field():
@@ -1171,20 +1173,22 @@ def test_adif_master_format_with_many_records():
 
 # ──────── CW exclusion tests ────────
 
-def test_cw_excluded_with_warning():
-    """CW contacts should be excluded with a warning message."""
+def test_cw_as_valid_digital_mode():
+    """CW contacts should be accepted as valid digital mode."""
     from app.adi_parser import parse_adi_file
     
     text = _adi_text([{"MY_CALL": "WB9XYZ", "CALL": "KB9ABC", "QSO_DATE": "20240615", "TIME_ON": "200000", "MODE": "CW"}])
     result = parse_adi_file(text)
 
-    assert result.success is False  # No valid records remain after CW exclusion
-    assert len(result.excluded_modes) == 1
-    assert any("CW" in w and "not accepted" in w for w in result.warnings)
+    assert result.success is True
+    r = result.records[0]
+    assert r.mode_type == "digital"
+    assert r.digital_mode == "CW"
+    assert len(result.excluded_modes) == 0
 
 
-def test_cw_excluded_but_other_records_remain():
-    """When some contacts are CW and others are valid, only CW should be excluded."""
+def test_cw_as_valid_digital_with_other_modes():
+    """When some contacts are CW and others are valid, all should be included."""
     from app.adi_parser import parse_adi_file
     
     recs = [
@@ -1196,13 +1200,14 @@ def test_cw_excluded_but_other_records_remain():
     result = parse_adi_file(_adi_text(recs))
 
     assert result.success is True
-    assert len(result.records) == 2  # FM and USB remain
-    assert len(result.excluded_modes) == 1
-    assert result.excluded_modes[0]["call"] == "NA9DEF"
+    assert len(result.records) == 3  # All modes valid now
+    assert result.records[1].mode_type == "digital"
+    assert result.records[1].digital_mode == "CW"
+    assert len(result.excluded_modes) == 0
 
 
-def test_excluded_modes_info_in_preview(client, app):
-    """Preview route should include excluded_modes_info in response."""
+def test_cw_in_preview(client, app):
+    """Preview route should include CW contacts as digital mode."""
     _seed_subs(app)
     recs = [
         {"MY_CALL": "WB9XYZ", "CALL": "KB9ABC", "QSO_DATE": "20240615", "TIME_ON": "143000", "MODE": "FM"},
@@ -1215,12 +1220,12 @@ def test_excluded_modes_info_in_preview(client, app):
 
     data = resp.get_json()
     assert data["success"] is True
-    assert len(data["excluded_modes_info"]) == 1
-    assert data["excluded_modes_info"][0]["mode"] == "CW"
+    assert len(data["records"]) == 2
+    assert data["has_digital"] is True
 
 
-def test_excluded_modes_warning_in_preview(client, app):
-    """Preview route should include CW exclusion warning."""
+def test_cw_contact_in_preview(client, app):
+    """Preview route should show CW contact as digital mode."""
     _seed_subs(app)
     recs = [
         {"MY_CALL": "WB9XYZ", "CALL": "KB9ABC", "QSO_DATE": "20240615", "TIME_ON": "143000", "MODE": "CW"},
@@ -1231,12 +1236,13 @@ def test_excluded_modes_warning_in_preview(client, app):
     }, content_type="multipart/form-data")
 
     data = resp.get_json()
-    assert data["success"] is False  # No valid records after CW exclusion
-    assert any("CW" in w and "not accepted" in w for w in data["warnings"])
+    assert data["success"] is True  # CW is now valid digital mode
+    assert len(data["records"]) == 1
+    assert data["has_digital"] is True
 
 
-def test_excluded_modes_empty_when_no_cw(client, app):
-    """Preview response should have empty excluded_modes_info when no CW contacts."""
+def test_no_excluded_modes_when_no_cw(client, app):
+    """Preview response should have empty excluded_modes_info when no contacts."""
     _seed_subs(app)
     recs = [
         {"MY_CALL": "WB9XYZ", "CALL": "KB9ABC", "QSO_DATE": "20240615", "TIME_ON": "143000", "MODE": "FM"},
@@ -1250,25 +1256,33 @@ def test_excluded_modes_empty_when_no_cw(client, app):
     assert len(data["excluded_modes_info"]) == 0
 
 
-def test_cw_not_in_valid_digital_modes():
-    """CW should not be in VALID_DIGITAL_MODES."""
-    from app.adi_parser import VALID_DIGITAL_MODES, EXCLUDED_MODES
-
-    assert "CW" not in VALID_DIGITAL_MODES
-    assert "CW" in EXCLUDED_MODES
-
-
-def test_cw_mode_not_in_mode_mapping():
-    """CW should not be in the adif_to_our_mode mapping."""
+def test_cw_in_digital_modes():
+    """CW should be treated as a valid digital mode."""
     from app.adi_parser import parse_adi_file
     
-    # CW mode without DIGITAL_MODE field should result in no mode mapping (falls through)
     text = _adi_text([{"MY_CALL": "WB9XYZ", "CALL": "KB9ABC", "QSO_DATE": "20240615", "TIME_ON": "200000", "MODE": "CW"}])
     result = parse_adi_file(text)
 
-    # CW is excluded, so no valid records
-    assert result.success is False
-    assert len(result.excluded_modes) == 1
+    # CW is now a valid digital mode
+    assert result.success is True
+    r = result.records[0]
+    assert r.mode_type == "digital"
+    assert r.digital_mode == "CW"
+
+
+def test_cw_mode_in_mode_mapping():
+    """CW should be in the adif_to_our_mode mapping as digital."""
+    from app.adi_parser import parse_adi_file
+    
+    # CW mode with MODE field should map to digital
+    text = _adi_text([{"MY_CALL": "WB9XYZ", "CALL": "KB9ABC", "QSO_DATE": "20240615", "TIME_ON": "200000", "MODE": "CW"}])
+    result = parse_adi_file(text)
+
+    # CW is now valid digital mode
+    assert result.success is True
+    r = result.records[0]
+    assert r.mode_type == "digital"
+    assert r.digital_mode == "CW"
 
 
 def test_adif_master_format_with_eoh_header():
@@ -1552,11 +1566,12 @@ def test_adif_master_format_real_world_example():
     result = parse_adi_file(content)
 
     assert result.success is True
-    assert len(result.records) == 2  # CW excluded, FT8 contacts remain
+    assert len(result.records) == 3  # CW is now valid digital mode
     assert result.records[0].contact_call == "KD7ABC"
-    assert result.records[1].contact_call == "KD6ABC"
-    assert len(result.excluded_modes) == 1
-    assert result.excluded_modes[0]["mode"] == "CW"
+    assert result.records[1].mode_type == "digital"
+    assert result.records[1].digital_mode == "CW"
+    assert result.records[2].contact_call == "KD6ABC"
+    assert len(result.excluded_modes) == 0
 
 
 def test_adif_master_format_preserves_pot_a_field_with_both_tags():
