@@ -1557,3 +1557,76 @@ def test_adif_master_format_real_world_example():
     assert result.records[1].contact_call == "KD6ABC"
     assert len(result.excluded_modes) == 1
     assert result.excluded_modes[0]["mode"] == "CW"
+
+
+def test_adif_master_format_preserves_pot_a_field_with_both_tags():
+    """When both POTA and MY_POTA_REF are present, POTA takes precedence."""
+    from app.adi_parser import parse_adi_file
+    
+    content = (
+        "<ADIF_VER:5>3.1<EOR><EOH>\n\n"
+        '<CALL:4>NA9DEF <MODE:3>FT8 <BAND:2>6m <FREQ:6>50.313 <QSO_DATE:8>20260609 <TIME_ON:6>033300 '
+        '<POTA:4>PARK <MY_POTA_REF:7>US-9913 <COMMENT:5>Contact<EOR>\n'
+    )
+    
+    result = parse_adi_file(content)
+
+    assert result.success is True
+    assert len(result.records) == 1
+    assert result.records[0].pota_park == "PARK"  # POTA field takes precedence
+
+
+def test_adif_master_pot_a_full_flow_with_pota_flag(client, app):
+    """Full flow: ADIF Master v3.6 with MY_POTA_REF → POTA flag applied → submission created → operator page displays park."""
+    _seed_subs(app)
+
+    # Simulate exact format from 20260609_US-9913.adi (ADIF Master v3.6 with MY_POTA_REF)
+    content = (
+        "FILE GENERATED ON 09 JUN, 2026 AT 05:12\n"
+        "<ADIF_VER:5>3.1.4<EOR><PROGRAMID:11>ADIF Master<EOR><EOH>\n\n"
+        '<CALL:5>KD7ABC <MODE:3>FT8 <BAND:2>6m <FREQ:6>50.313 <QSO_DATE:8>20260609 <TIME_ON:6>032800 '
+        '<STATION_CALLSIGN:6>KX1ZZZ <OPERATOR:6>KX1ZZZ <MY_GRIDSQUARE:6>EN32ia <MY_STATE:2>IA '
+        '<NAME:13>T B Smith <DXCC:3>291 <QTH:9 Warrenton <STATE:2>VA <CQZ:1>5 <ITUZ:1>8 '
+        '<QSLMSG:12>POTA US-9913 <MY_SIG:4>POTA <MY_SIG_INFO:7>US-9913 <MY_POTA_REF:7>US-9913 '
+        '<MY_RIG:7>FT-450d <MY_COUNTRY:3>USA <MY_CNTY:8>IA,Story <COMMENT:25>20260609 POTA ACT US-9913 '
+        '<TX_PWR:2>50 <EOR>\n'
+    )
+
+    # Step 1: Upload with POTA='yes' flag
+    resp = client.post("/submit/adi_preview", data={
+        "adi_file": (io.BytesIO(content.encode("utf-8")), "test.adi"),
+        "adi_is_pota": "yes",
+    }, content_type="multipart/form-data")
+
+    data = resp.get_json()
+    assert data["success"] is True
+    assert data["has_pota"] is True
+    assert len(data["records"]) == 1
+    assert data["records"][0]["is_pota"] is True
+    assert data["records"][0]["pota_park"] == "US-9913"
+
+    # Step 2: Submit the batch
+    preview_data = resp.get_json()
+    batch_data = {}
+    for i, rec in enumerate(preview_data["records"]):
+        batch_data[f"adi_records[{i}][my_call]"] = rec["my_call"]
+        batch_data[f"adi_records[{i}][call]"] = rec["call"]
+        batch_data[f"adi_records[{i}][qso_date]"] = rec["qso_date"]
+        batch_data[f"adi_records[{i}][time_on]"] = rec["time_on"]
+        batch_data[f"adi_records[{i}][mode_type]"] = rec["mode_type"]
+        if rec.get("digital_mode"):
+            batch_data[f"adi_records[{i}][digital_mode]"] = rec["digital_mode"]
+        batch_data[f"adi_records[{i}][frequency]"] = rec["freq"]
+        batch_data[f"adi_records[{i}][is_pota]"] = "yes" if rec["is_pota"] else "no"
+        batch_data[f"adi_records[{i}][pota_park]"] = rec.get("pota_park", "")
+
+    resp = client.post("/submit/adi_batch", data=batch_data)
+    assert resp.status_code == 200
+
+    # Step 3: Verify submission was created with POTA fields
+    with app.app_context():
+        sub = Submission.query.filter_by(contact_call="KD7ABC").first()
+        assert sub is not None, "Submission should have been created for KD7ABC"
+        assert sub.is_pota is True, "is_pota flag should be set on submission"
+        assert sub.pota_park == "US-9913", f"POTA park should be US-9913, got {sub.pota_park}"
+

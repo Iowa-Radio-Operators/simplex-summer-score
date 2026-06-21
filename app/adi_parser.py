@@ -128,6 +128,9 @@ def _parse_record(raw_text: str) -> ADIFRecord | None:
                 pass
         elif tag_name == "pota":
             record.pota_park = value  # park refs are case-insensitive
+        elif tag_name == "my_pota_ref" and not record.pota_park:
+            # ADIF Master v3.6 uses MY_POTA_REF instead of POTA field
+            record.pota_park = value
         elif tag_name == "digital_mode":
             dm = value.upper()
             if dm in VALID_DIGITAL_MODES:
