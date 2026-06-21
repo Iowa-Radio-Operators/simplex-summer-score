@@ -108,8 +108,8 @@ def test_preview_table_shows_contact_data(page: Page):
     
     expect(page.get_by_text("contact(s) found in file")).to_be_visible(timeout=5000)
     
-    # Check that K1ABC appears (it's the duplicate test file with 4 contacts)
-    expect(page.get_by_text("K1ABC").first).to_contain_text("K1ABC")
+    # Check that KA9ABC appears (it's the duplicate test file with 4 contacts)
+    expect(page.get_by_text("KA9ABC").first).to_contain_text("KA9ABC")
 
 
 def test_preview_shows_duplicate_flag(page: Page):
@@ -118,9 +118,9 @@ def test_preview_shows_duplicate_flag(page: Page):
     
     expect(page.get_by_text("contact(s) found in file")).to_be_visible(timeout=5000)
     
-    # Check that duplicate records (K1ABC appearing twice with same date/time/mode) are rendered
-    k1abc_rows = page.locator('td:has-text("K1ABC")')
-    assert k1abc_rows.count() >= 2, f"Expected at least 2 K1ABC entries, found {k1abc_rows.count()}"
+    # Check that duplicate records (KA9ABC appearing twice with same date/time/mode) are rendered
+    k1abc_rows = page.locator('td:has-text("KA9ABC")')
+    assert k1abc_rows.count() >= 2, f"Expected at least 2 KA9ABC entries, found {k1abc_rows.count()}"
 
 
 def test_upload_empty_file_shows_error(page: Page):

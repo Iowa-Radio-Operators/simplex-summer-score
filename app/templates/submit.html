@@ -318,7 +318,7 @@ updatePotaSection();
                     (data.has_pota ? '<th>POTA Park</th>' : '') + '</tr></thead>';
             html += '<tbody>';
 
-            for (let i = 0; i < data.records.length && i < 20; i++) {
+            for (let i = 0; i < data.records.length; i++) {
                 const r = data.records[i];
                 const dateStr = formatDate(r.qso_date);
                 const timeStr = formatTime(r.time_on);
@@ -327,7 +327,7 @@ updatePotaSection();
                 html += '<td><strong>' + escHtml(r.my_call || r.call) + '</strong></td>';
                 html += '<td><strong>' + escHtml(r.call) + '</strong></td>';
                 html += '<td>' + dateStr + ' ' + timeStr + '</td>';
-                html += '<td>' + escHtml(r.mode_type) + (r.is_pota ? ' + POTA' : '') + '</td>';
+                html += '<td>' + escHtml(r.mode_type) + (r.is_pota ? ' + POTA' : '') + (r.is_duplicate ? ' ⏭ Skipped (duplicate)' : '') + '</td>';
                 html += '<td>' + (r.freq || '-') + '</td>';
                 if (data.has_digital) {
                     html += '<td>' + escHtml(r.digital_mode || '-') + '</td>';
@@ -337,12 +337,6 @@ updatePotaSection();
                 }
                 html += '</tr>';
             }
-
-            if (data.count > 20) {
-                html += '<tr><td colspan="8" style="text-align:center; color:#666;">… and ' + (data.count - 20) + ' more rows</td></tr>';
-            }
-
-            html += '</tbody></table>';
 
             // Hidden form to submit all records
             for (let i = 0; i < data.records.length; i++) {
@@ -362,14 +356,20 @@ updatePotaSection();
                     html += '<input type="hidden" name="adi_records[' + i + '][digital_mode]" value="' + escAttr(r.digital_mode) + '">';
                 }
                 html += '<input type="hidden" name="adi_records[' + i + '][frequency]" value="' + (r.freq || '') + '">';
+                if (r.is_duplicate) {
+                    html += '<input type="hidden" name="adi_records[' + i + '][is_duplicate]" value="yes">';
+                } else {
+                    html += '<input type="hidden" name="adi_records[' + i + '][is_duplicate]" value="no">';
+                }
                 if (r.notes) {
                     html += '<input type="hidden" name="adi_records[' + i + '][notes]" value="' + escAttr(r.notes) + '">';
                 }
             }
 
             // Confirmation button — submits the hidden form
+            var submitCount = data.records.filter(function(r) { return !r.is_duplicate; }).length;
             html += '<button type="button" class="btn btn-success" id="adiConfirmBtn" style="margin-top:10px;">' +
-                    'Submit All (' + data.count + ' contacts)</button>';
+                    'Submit All (' + submitCount + ' contacts)</button>';
 
         } else {
             // Errors

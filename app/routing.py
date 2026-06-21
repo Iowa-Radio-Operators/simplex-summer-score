@@ -103,15 +103,18 @@ def adi_preview():
             if r.pota_park:
                 r.is_pota = True
 
-    # Build preview payload — only include up to 20 records for the table
+    # Build preview payload — include all parsed records for the table
     has_digital = any(r.digital_mode for r in result.records)
     has_pota = any(r.is_pota for r in result.records)
+    has_duplicates = any(r.is_duplicate for r in result.records)
 
     return jsonify({
         "success":       result.success,
         "count":         len(result.records),
         "errors":        result.errors,
         "warnings":      result.warnings,
+        "excluded_modes_info": result.excluded_modes,
+        "has_duplicates": has_duplicates,
         "records": [
             {
                 "my_call":      r.submitted_by or "",
@@ -126,7 +129,7 @@ def adi_preview():
                 "notes":        r.notes or "",
                 "is_duplicate": r.is_duplicate,
             }
-            for r in result.records[:20]
+            for r in result.records
         ],
         "has_digital": has_digital,
         "has_pota":    has_pota,
@@ -154,6 +157,7 @@ def adi_batch():
         digital_mode = request.form.get(f"adi_records[{i}][digital_mode]", "").strip() or None
         frequency_str = request.form.get(f"adi_records[{i}][frequency]", "").strip()
         notes     = request.form.get(f"adi_records[{i}][notes]", "").strip()
+        is_duplicate = request.form.get(f"adi_records[{i}][is_duplicate]") == "yes"
 
         if not call:
             i += 1
@@ -177,6 +181,7 @@ def adi_batch():
             "digital_mode": digital_mode,
             "frequency":    freq_val,
             "notes":        notes,
+            "is_duplicate": is_duplicate,
         })
 
         i += 1
@@ -193,6 +198,9 @@ def adi_batch():
     errors = []
     created = 0
     for c in contacts:
+        if c.get("is_duplicate"):
+            continue
+
         errs = []
         if not c["contact_call"]:
             errs.append("Missing callsign.")

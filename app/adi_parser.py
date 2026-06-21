@@ -27,11 +27,23 @@ ADI_TAG_RE = re.compile(r"<([a-zA-Z_]+):(\d+)>([^<]*)", re.DOTALL)
 # Valid digital modes in ADIF (maps to our form's digital_mode options)
 VALID_DIGITAL_MODES = {"SSTV", "PSK", "RTTY", "FT4/8", "JS8", "WINLINK"}
 
+# Modes excluded from contest scoring (e.g., CW not accepted for simplex summer)
+EXCLUDED_MODES = {"CW"}
+
 # Common ham band frequencies in MHz (for sanity checking)
 COMMON_BANDS = [
     1.8, 3.5, 5.0, 7.0, 10.1, 14.0, 18.06, 21.0, 24.89, 28.0,
     50.0, 52.0, 144.0, 146.0, 222.0, 420.0, 432.0, 440.0,
     902.0, 904.0, 1200.0, 1240.0,
+]
+
+# VHF/UHF bands allowed for simplex summer (frequency ranges in MHz)
+ALLOWED_BANDS = [
+    ("6m", 50.0, 54.0),       # 6 meter band
+    ("2m", 144.0, 148.0),     # 2 meter band  
+    ("220MHz", 222.0, 225.0), # 220 MHz band
+    ("70cm/GMRS", 420.0, 480.0), # 70 cm / GMRS band
+    ("33cm", 890.0, 930.0),   # 33 cm band
 ]
 
 
@@ -46,6 +58,7 @@ class ADIFRecord:
     is_pota: bool = False         # POTA contact flag
     pota_park: str = ""           # POTA park reference
     digital_mode: str = ""        # digital mode name
+    adif_mode: str = ""           # raw ADIF mode value (FM, USB, etc.) for dedup accuracy
     frequency: float = 0.0        # in MHz
     notes: str = ""               # comments
     is_duplicate: bool = False    # flagged as duplicate during dedup pass
@@ -59,6 +72,7 @@ class ADIFParseResult:
     errors: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
     duplicates: list[dict] = field(default_factory=list)  # deduped records info
+    excluded_modes: list[dict] = field(default_factory=list)  # excluded mode info (e.g., CW contacts)
 
 
 def _parse_record(raw_text: str) -> ADIFRecord | None:
@@ -103,6 +117,8 @@ def _parse_record(raw_text: str) -> ADIFRecord | None:
             }
             if adif_to_our_mode.get(value):
                 record.mode_type, digital = adif_to_our_mode[value]
+                # Store raw ADIF mode value for dedup accuracy (FM vs USB are different modes)
+                record.adif_mode = value
                 if digital:
                     record.digital_mode = digital
         elif tag_name == "freq":
@@ -112,6 +128,9 @@ def _parse_record(raw_text: str) -> ADIFRecord | None:
                 pass
         elif tag_name == "pota":
             record.pota_park = value  # park refs are case-insensitive
+        elif tag_name == "my_pota_ref" and not record.pota_park:
+            # ADIF Master v3.6 uses MY_POTA_REF instead of POTA field
+            record.pota_park = value
         elif tag_name == "digital_mode":
             dm = value.upper()
             if dm in VALID_DIGITAL_MODES:
@@ -187,29 +206,36 @@ def _deduplicate_records(result: ADIFParseResult) -> None:
     """Mark duplicate records in-place.
 
     A record is considered a duplicate if another record has the same
-    submitted_by, qso_date, time_on, and mode_type.  Only the first
-    occurrence remains valid; subsequent duplicates get ``is_duplicate=True``
+    submitted_by, contact_caller, qso_date, time_on, mode_type, AND frequency.
+    Only the first occurrence remains valid; subsequent duplicates get ``is_duplicate=True``
     and are added to :attr:`ADIFParseResult.duplicates` (as dicts).
 
-    Deduplication key: (submitted_by.upper(), qso_date, time_on, mode_type)
+    Deduplication key: (dedup_caller, contact_caller.upper(), qso_date, time_on, adif_mode, frequency)
+    
+    Note: uses raw ADIF mode value (e.g., FM vs USB) rather than mapped mode_type 
+    so that different voice modes are not falsely matched as duplicates.
     """
-    seen_keys: dict[tuple[str, str, str, str], int] = {}
+    seen_keys: dict[tuple[str, str, str, str, str, float], int] = {}
     for i, rec in enumerate(result.records):
         if rec.is_duplicate or not rec.qso_date or not rec.time_on:
             continue
 
         # Use submitted_by as primary key; fall back to CALL when MY_CALL is missing
         dedup_caller = (rec.submitted_by or rec.contact_call).upper()
-        key = (dedup_caller, rec.qso_date, rec.time_on, rec.mode_type)
+        contact_caller = (rec.contact_call or "").upper()
+        freq_key = round(rec.frequency, 3) if rec.frequency else 0.0
+        key = (dedup_caller, contact_caller, rec.qso_date, rec.time_on, rec.adif_mode, freq_key)
         if key in seen_keys:
             rec.is_duplicate = True
             original_idx = seen_keys[key] + 1  # 1-based for display
             result.duplicates.append({
                 "line": i + 1,
                 "my_call": rec.submitted_by or "",
+                "contact_caller": contact_caller,
                 "qso_date": rec.qso_date,
                 "time_on": rec.time_on,
                 "mode_type": rec.mode_type,
+                "frequency": freq_key,
                 "duplicate_of_line": original_idx,
             })
         else:
@@ -263,6 +289,22 @@ def parse_adi_file(content: str) -> ADIFParseResult:
                 current_lines.append(line)
         if current_lines:
             raw_records.append("\n".join(current_lines))
+        
+        # Post-process blocks that contain multiple complete QSO records.
+        # This handles ADIF Master v3.6 exports where all contacts are on a single line
+        # separated by spaces, with each record ending in <EOR>.
+        expanded = []
+        for block in raw_records:
+            call_count = len(re.findall(r"<CALL:\d+>", block))
+            if call_count > 1:
+                # Multi-record block — split on <EOR> and keep only valid records
+                pieces = re.split(r"<EOR>", block)
+                for piece in pieces:
+                    if "<CALL:" in piece and ("<QSO_DATE:" in piece or "<TIME_ON:" in piece):
+                        expanded.append(piece.strip())
+            else:
+                expanded.append(block)
+        raw_records = expanded
     else:
         # Non-<EOC> format without blank lines — each line is a complete record.
         raw_records = [line for line in text.split("\n") if line.strip()]
@@ -283,6 +325,23 @@ def parse_adi_file(content: str) -> ADIFParseResult:
         if errors:
             result.errors.extend(errors)
             continue
+
+        # Exclude excluded modes (e.g., CW not accepted for simplex summer)
+        if record.adif_mode and record.adif_mode in EXCLUDED_MODES:
+            result.excluded_modes.append({"mode": record.adif_mode, "call": record.contact_call})
+            result.warnings.append(f"{record.adif_mode} mode is not accepted in this contest.")
+            continue
+
+        # Filter out-of-band frequencies silently
+        if record.frequency:
+            in_band = False
+            for band_name, low, high in ALLOWED_BANDS:
+                if low <= record.frequency <= high:
+                    in_band = True
+                    break
+            if not in_band:
+                continue
+
 
         # Clean up: strip trailing slashes from pota_park; limit length
         if record.pota_park:
